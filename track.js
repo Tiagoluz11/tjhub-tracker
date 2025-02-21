@@ -1,5 +1,5 @@
 (function () {
-  //TJ 2.5
+  //TJ 2.6
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = tjHub.dataLayer || [];
   tjHub.site_id = tjHub.site_id || 'UNKNOWN_SITE';
