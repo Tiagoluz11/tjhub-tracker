@@ -1,5 +1,5 @@
 (function () {
-  //TJ 1.7
+  //TJ 2.0
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = tjHub.dataLayer || [];
   tjHub.site_id = tjHub.site_id || 'UNKNOWN_SITE';
@@ -7,6 +7,7 @@
   localStorage.setItem("tj_session_id", tjHub.session_id);
 
   let lastScrollPosition = 0;
+  let touchStartX = 0;
 
   // Captura a posição do scroll sempre que o usuário rolar
   window.addEventListener("scroll", function () {
@@ -62,6 +63,31 @@
       session_id: tjHub.session_id
     });
   }
+
+  // Detecta saída no desktop (mouse saindo da tela superior)
+  document.addEventListener("mouseleave", function (event) {
+    if (event.clientY <= 0) {
+      sendFinalScrollEvent();
+    }
+  });
+
+  // Detecta botão "voltar" no mobile (Android e iOS)
+  window.onpopstate = function () {
+    sendFinalScrollEvent();
+  };
+  history.pushState({}, ''); // Impede saída imediata
+
+  // Detecta gesto de saída no iOS (deslizar para trás)
+  document.addEventListener("touchstart", function (e) {
+    touchStartX = e.touches[0].clientX;
+  });
+
+  document.addEventListener("touchend", function (e) {
+    let touchEndX = e.changedTouches[0].clientX;
+    if (touchStartX < 20 && touchEndX > 80) {
+      sendFinalScrollEvent();
+    }
+  });
 
   // Envia os dados quando o usuário sai da página
   window.addEventListener("beforeunload", sendFinalScrollEvent);
