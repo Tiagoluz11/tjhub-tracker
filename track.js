@@ -1,4 +1,5 @@
-(function() {
+(function () {
+  //TJ 1.7
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = tjHub.dataLayer || [];
   tjHub.site_id = tjHub.site_id || 'UNKNOWN_SITE';
@@ -8,12 +9,12 @@
   let lastScrollPosition = 0;
 
   // Captura a posição do scroll sempre que o usuário rolar
-  window.addEventListener("scroll", function() {
+  window.addEventListener("scroll", function () {
     lastScrollPosition = window.scrollY;
   });
 
   // Função para enviar eventos ao servidor
-  tjHub.track = function(event, data = {}) {
+  tjHub.track = function (event, data = {}) {
     data.url = window.location.href;
     data.referrer = document.referrer;
     data.session_id = tjHub.session_id;
@@ -37,10 +38,11 @@
   // Captura Page View
   tjHub.track('page_view');
 
-  // Captura Cliques em Botões e Links
-  document.addEventListener("click", function(event) {
+  // Captura Cliques em Botões e Links e também envia a última posição do scroll
+  document.addEventListener("click", function (event) {
     const target = event.target.closest('a, button');
     if (target) {
+      sendFinalScrollEvent(); // Envia a posição do scroll antes de processar o clique
       tjHub.track('click', {
         target: target.tagName.toLowerCase(),
         text: target.innerText.substring(0, 50),
@@ -63,11 +65,11 @@
 
   // Envia os dados quando o usuário sai da página
   window.addEventListener("beforeunload", sendFinalScrollEvent);
-  document.addEventListener("visibilitychange", function() {
+  document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") {
       sendFinalScrollEvent();
     }
   });
-  
+
   window.tjHub = tjHub;
 })();
