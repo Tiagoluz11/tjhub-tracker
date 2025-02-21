@@ -1,5 +1,5 @@
 (function () {
-  //TJ 3.0
+  //TJ 3.1
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = tjHub.dataLayer || [];
   tjHub.site_id = tjHub.site_id || 'UNKNOWN_SITE';
@@ -13,7 +13,7 @@
   window.addEventListener("scroll", function () {
     lastScrollPosition = window.scrollY;
     clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(sendScrollEvent, 4000); // Envia após 4 segundos de inatividade
+    scrollTimeout = setTimeout(sendScrollEvent, 3000); // Envia após 3 segundos de inatividade
   });
 
   function sendScrollEvent() {
