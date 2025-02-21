@@ -1,5 +1,5 @@
 (function () {
-  //TJ 2.8
+  //TJ 3.0
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = tjHub.dataLayer || [];
   tjHub.site_id = tjHub.site_id || 'UNKNOWN_SITE';
@@ -48,6 +48,20 @@
 
   // Captura Page View
   tjHub.track('page_view');
+
+  // Captura Cliques em Botões e Links e também envia a última posição do scroll
+  document.addEventListener("click", function (event) {
+    const target = event.target.closest('a, button');
+    if (target) {
+      sendScrollEvent(); // Envia a posição do scroll antes de processar o clique
+      tjHub.track('click', {
+        target: target.tagName.toLowerCase(),
+        text: target.innerText.substring(0, 50),
+        class: target.className || '',
+        id: target.id || ''
+      });
+    }
+  });
 
   window.tjHub = tjHub;
 })();
