@@ -1,5 +1,5 @@
 (function () {
-  //TJ 2.0
+  //TJ 2.5
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = tjHub.dataLayer || [];
   tjHub.site_id = tjHub.site_id || 'UNKNOWN_SITE';
@@ -39,41 +39,16 @@
   // Captura Page View
   tjHub.track('page_view');
 
-  // Captura Cliques em Botões e Links e também envia a última posição do scroll
-  document.addEventListener("click", function (event) {
-    const target = event.target.closest('a, button');
-    if (target) {
-      sendFinalScrollEvent(); // Envia a posição do scroll antes de processar o clique
-      tjHub.track('click', {
-        target: target.tagName.toLowerCase(),
-        text: target.innerText.substring(0, 50),
-        class: target.className || '',
-        id: target.id || ''
-      });
-    }
-  });
-
-  // Captura Scroll Vertical apenas quando o usuário sair
-  function sendFinalScrollEvent() {
-    let scrollDepth = Math.round((lastScrollPosition / (document.documentElement.scrollHeight - window.innerHeight)) * 100);
-    tjHub.track("vertical_scroll", {
-      scroll_y: lastScrollPosition,
-      scroll_percentage: scrollDepth,
-      screen_size: `${window.innerWidth}x${window.innerHeight}`,
-      session_id: tjHub.session_id
-    });
-  }
-
   // Detecta saída no desktop (mouse saindo da tela superior)
   document.addEventListener("mouseleave", function (event) {
     if (event.clientY <= 0) {
-      sendFinalScrollEvent();
+      tjHub.track("vertical_scroll", { scroll_y: lastScrollPosition, screen_size: `${window.innerWidth}x${window.innerHeight}`, session_id: tjHub.session_id });
     }
   });
 
   // Detecta botão "voltar" no mobile (Android e iOS)
   window.onpopstate = function () {
-    sendFinalScrollEvent();
+    tjHub.track("vertical_scroll", { scroll_y: lastScrollPosition, screen_size: `${window.innerWidth}x${window.innerHeight}`, session_id: tjHub.session_id });
   };
   history.pushState({}, ''); // Impede saída imediata
 
@@ -85,15 +60,17 @@
   document.addEventListener("touchend", function (e) {
     let touchEndX = e.changedTouches[0].clientX;
     if (touchStartX < 20 && touchEndX > 80) {
-      sendFinalScrollEvent();
+      tjHub.track("vertical_scroll", { scroll_y: lastScrollPosition, screen_size: `${window.innerWidth}x${window.innerHeight}`, session_id: tjHub.session_id });
     }
   });
 
   // Envia os dados quando o usuário sai da página
-  window.addEventListener("beforeunload", sendFinalScrollEvent);
+  window.addEventListener("beforeunload", function () {
+    tjHub.track("vertical_scroll", { scroll_y: lastScrollPosition, screen_size: `${window.innerWidth}x${window.innerHeight}`, session_id: tjHub.session_id });
+  });
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState === "hidden") {
-      sendFinalScrollEvent();
+      tjHub.track("vertical_scroll", { scroll_y: lastScrollPosition, screen_size: `${window.innerWidth}x${window.innerHeight}`, session_id: tjHub.session_id });
     }
   });
 
