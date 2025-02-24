@@ -1,5 +1,5 @@
 (function () {
-  // TJ 3.3 - Melhor captura de eventos de saída
+  // TJ 3.4 - Captura eventos internos e externos corretamente
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = tjHub.dataLayer || [];
   tjHub.site_id = tjHub.site_id || 'UNKNOWN_SITE';
@@ -49,32 +49,32 @@
   // Captura Page View
   tjHub.track('page_view');
 
-  // Captura Cliques em Botões e Links Internos e Externos
+  // Captura Cliques em Botões e Links Internos/Externos
   document.addEventListener("click", function (event) {
     const target = event.target.closest('a, button');
-    if (target) {
-      sendScrollEvent(); // Envia a posição do scroll antes de processar o clique
+    if (!target) return;
 
-      let isExternal = target.tagName.toLowerCase() === 'a' && target.hostname !== window.location.hostname;
+    sendScrollEvent(); // Envia a posição do scroll antes de processar o clique
 
-      let eventData = {
-        target: target.tagName.toLowerCase(),
-        text: target.innerText.substring(0, 50),
-        class: target.className || '',
-        id: target.id || '',
-        href: target.href || '',
-        external: isExternal
-      };
+    let isExternal = target.tagName.toLowerCase() === 'a' && target.hostname !== window.location.hostname;
 
-      if (isExternal) {
-        event.preventDefault(); // Evita que o link redirecione imediatamente
-        tjHub.track('click_outbound', eventData);
-        setTimeout(() => {
-          window.location.href = target.href; // Aguarda o envio do evento antes de redirecionar
-        }, 400);
-      } else {
-        tjHub.track('click', eventData);
-      }
+    let eventData = {
+      target: target.tagName.toLowerCase(),
+      text: target.innerText.substring(0, 50),
+      class: target.className || '',
+      id: target.id || '',
+      href: target.href || '',
+      external: isExternal
+    };
+
+    if (isExternal) {
+      event.preventDefault(); // Apenas para links externos
+      tjHub.track('click_outbound', eventData);
+      setTimeout(() => {
+        window.location.href = target.href; // Aguarda o envio do evento antes de redirecionar
+      }, 400);
+    } else {
+      tjHub.track('click', eventData);
     }
   });
 
