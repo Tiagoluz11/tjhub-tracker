@@ -1,5 +1,5 @@
 (function () {
-  // TJ 3.4 - Captura eventos internos e externos corretamente
+  // TJ 3.5 - Melhor captura de cliques sem bloquear a navegação
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = tjHub.dataLayer || [];
   tjHub.site_id = tjHub.site_id || 'UNKNOWN_SITE';
@@ -49,31 +49,29 @@
   // Captura Page View
   tjHub.track('page_view');
 
-  // Captura Cliques em Botões e Links Internos/Externos
+  // Captura Cliques em Botões e Links
   document.addEventListener("click", function (event) {
     const target = event.target.closest('a, button');
     if (!target) return;
 
     sendScrollEvent(); // Envia a posição do scroll antes de processar o clique
 
-    let isExternal = target.tagName.toLowerCase() === 'a' && target.hostname !== window.location.hostname;
-
     let eventData = {
       target: target.tagName.toLowerCase(),
       text: target.innerText.substring(0, 50),
       class: target.className || '',
       id: target.id || '',
-      href: target.href || '',
-      external: isExternal
+      href: target.href || ''
     };
 
-    if (isExternal) {
-      event.preventDefault(); // Apenas para links externos
+    if (target.tagName.toLowerCase() === 'a' && target.hostname !== window.location.hostname) {
+      // Se for um link externo, captura antes da saída
+      eventData.external = true;
       tjHub.track('click_outbound', eventData);
-      setTimeout(() => {
-        window.location.href = target.href; // Aguarda o envio do evento antes de redirecionar
-      }, 400);
+      
+      navigator.sendBeacon('https://tj-track-bd.tj-studio-ltda.workers.dev/', JSON.stringify({ events: [ { event: 'click_outbound', data: eventData } ] }));
     } else {
+      // Se for interno, registra como clique normal
       tjHub.track('click', eventData);
     }
   });
