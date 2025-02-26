@@ -1,39 +1,37 @@
 (function () {
-  // TJ 3.8 - Integração com dataLayer para capturar site_id corretamente
+  // TJ 3.9 - Captura automática do site_id da URL do script
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = window.dataLayer = window.dataLayer || [];
-  tjHub.site_id = 'UNKNOWN_SITE'; // Valor padrão antes de capturar da dataLayer
+  tjHub.site_id = 'UNKNOWN_SITE'; // Valor padrão antes de capturar da URL
+
+  // 🔹 Captura o site_id da URL do script carregado
+  function getSiteIdFromScript() {
+    const scripts = document.getElementsByTagName('script');
+    for (let script of scripts) {
+      if (script.src.includes('tjhub-tracker.pages.dev/track.js')) {
+        const urlParams = new URL(script.src).searchParams;
+        const siteId = urlParams.get('site_id');
+        if (siteId) {
+          return siteId;
+        }
+      }
+    }
+    return null;
+  }
+
+  // 🔹 Define o site_id automaticamente se estiver na URL
+  const detectedSiteId = getSiteIdFromScript();
+  if (detectedSiteId) {
+    tjHub.site_id = detectedSiteId;
+  }
+
   tjHub.session_id = localStorage.getItem("tj_session_id") || `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   localStorage.setItem("tj_session_id", tjHub.session_id);
 
   let lastScrollPosition = 0;
   let scrollTimeout;
 
-  // 🔹 Função para processar o dataLayer e capturar site_id
-  function processaDataLayer() {
-    for (let item of tjHub.dataLayer) {
-      if (Array.isArray(item) && item[0] === 'config' && item[1].site_id) {
-        tjHub.site_id = item[1].site_id;
-      }
-    }
-  }
-
-  // 🔹 Captura eventos do dataLayer e processa site_id dinamicamente
-  function tjtag() {
-    let args = Array.from(arguments);
-    tjHub.dataLayer.push(args);
-    
-    if (args[0] === 'config' && args[1].site_id) {
-      tjHub.site_id = args[1].site_id;
-    }
-  }
-
-  window.tjtag = tjtag;
-  
-  // 🔹 Processa dataLayer após um pequeno delay para garantir que os dados tenham sido carregados
-  setTimeout(processaDataLayer, 500);
-
-  // 🔹 Captura a posição do scroll sempre que o usuário rolar
+  // 🔹 Captura a posição do scroll
   window.addEventListener("scroll", function () {
     lastScrollPosition = window.scrollY;
     clearTimeout(scrollTimeout);
