@@ -1,7 +1,7 @@
 (function () {
-  // TJ 3.7 - Integração com dataLayer
+  // TJ 3.8 - Integração com dataLayer para capturar site_id corretamente
   let tjHub = window.tjHub || {};
-  tjHub.dataLayer = window.dataLayer || [];
+  tjHub.dataLayer = window.dataLayer = window.dataLayer || [];
   tjHub.site_id = 'UNKNOWN_SITE'; // Valor padrão antes de capturar da dataLayer
   tjHub.session_id = localStorage.getItem("tj_session_id") || `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   localStorage.setItem("tj_session_id", tjHub.session_id);
@@ -9,26 +9,29 @@
   let lastScrollPosition = 0;
   let scrollTimeout;
 
-  // 🔹 Verifica se há configurações no dataLayer
+  // 🔹 Função para processar o dataLayer e capturar site_id
   function processaDataLayer() {
     for (let item of tjHub.dataLayer) {
-      if (item.config && item.config.site_id) {
-        tjHub.site_id = item.config.site_id;
+      if (Array.isArray(item) && item[0] === 'config' && item[1].site_id) {
+        tjHub.site_id = item[1].site_id;
       }
     }
   }
 
-  // 🔹 Captura eventos do dataLayer como o Google Tag Manager
+  // 🔹 Captura eventos do dataLayer e processa site_id dinamicamente
   function tjtag() {
     let args = Array.from(arguments);
     tjHub.dataLayer.push(args);
+    
     if (args[0] === 'config' && args[1].site_id) {
       tjHub.site_id = args[1].site_id;
     }
   }
 
   window.tjtag = tjtag;
-  processaDataLayer();
+  
+  // 🔹 Processa dataLayer após um pequeno delay para garantir que os dados tenham sido carregados
+  setTimeout(processaDataLayer, 500);
 
   // 🔹 Captura a posição do scroll sempre que o usuário rolar
   window.addEventListener("scroll", function () {
@@ -89,8 +92,8 @@
       // Se for um link externo, captura antes da saída
       eventData.external = true;
       tjHub.track('click_outbound', eventData);
-
-      navigator.sendBeacon('https://tj-track-bd.tj-studio-ltda.workers.dev/', JSON.stringify({ events: [{ event: 'click_outbound', data: eventData }] }));
+      
+      navigator.sendBeacon('https://tj-track-bd.tj-studio-ltda.workers.dev/', JSON.stringify({ events: [ { event: 'click_outbound', data: eventData } ] }));
     } else {
       // Se for interno, registra como clique normal
       tjHub.track('click', eventData);
