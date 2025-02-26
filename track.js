@@ -1,5 +1,5 @@
 (function () {
-  // TJ 3.5 - Melhor captura de cliques sem bloquear a navegação
+  // TJ 3.6 - Melhor captura de cliques sem bloquear a navegação
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = tjHub.dataLayer || [];
   tjHub.site_id = tjHub.site_id || 'UNKNOWN_SITE';
