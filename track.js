@@ -1,10 +1,9 @@
 (function () {
-  // TJ 5.5
+  // TJ 5.6
   let tjHub = window.tjHub || {};
   tjHub.dataLayer = window.dataLayer = window.dataLayer || [];
-  tjHub.site_id = 'UNKNOWN_SITE'; // Valor padrÃ£o antes da captura automÃ¡tica
+  tjHub.site_id = 'UNKNOWN_SITE';
 
-  // ðŸ” Captura automaticamente o site_id da URL do script carregado
   function getSiteIdFromScript() {
     const scripts = document.getElementsByTagName('script');
     for (let script of scripts) {
@@ -16,17 +15,14 @@
     return 'UNKNOWN_SITE';
   }
 
-  // Define o site_id automaticamente
   tjHub.site_id = getSiteIdFromScript();
 
-  // Cria um session_id Ãºnico por usuÃ¡rio
   tjHub.session_id = localStorage.getItem("tj_session_id") || `sess_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   localStorage.setItem("tj_session_id", tjHub.session_id);
 
   let lastScrollPosition = 0;
   let scrollTimeout;
 
-  // Captura a posiÃ§Ã£o do scroll e envia apÃ³s 3s de inatividade
   window.addEventListener("scroll", function () {
     lastScrollPosition = window.scrollY;
     clearTimeout(scrollTimeout);
@@ -41,11 +37,6 @@
     });
   }
 
-  // Captura o host do cliente (domínio atual)
-  tjHub.url_host = window.location.hostname;
-
-
-  // ðŸ”¹ FunÃ§Ã£o para enviar eventos ao servidor
   tjHub.track = function (event, data = {}) {
     data.url = window.location.href;
     data.referrer = document.referrer;
@@ -54,7 +45,6 @@
     data.screen_size = `${window.innerWidth}x${window.innerHeight}`;
     data.device = navigator.userAgent;
     data.timestamp = new Date().toISOString();
-    data.url_host = tjHub.url_host;
 
     tjHub.dataLayer.push({ event, data });
 
@@ -68,15 +58,13 @@
     }
   };
 
-  // ðŸ”¹ Captura automaticamente o Page View
   tjHub.track('page_view');
 
-  // ðŸ”¹ Captura Cliques em BotÃµes e Links (melhorado)
   document.addEventListener("click", function (event) {
     const target = event.target.closest('a, button');
     if (!target) return;
 
-    sendScrollEvent(); // Captura posiÃ§Ã£o do scroll antes do clique
+    sendScrollEvent();
 
     let eventData = {
       target: target.tagName.toLowerCase(),
@@ -87,14 +75,14 @@
     };
 
     if (target.tagName.toLowerCase() === 'a' && target.hostname !== window.location.hostname) {
-      // Se for um link externo, registra como "click_outbound"
+      
       eventData.external = true;
       tjHub.track('click_outbound', eventData);
 
-      // Usa sendBeacon para evitar bloqueios na navegaÃ§Ã£o
+      
       navigator.sendBeacon(`https://tj-track-bd.tj-studio-ltda.workers.dev/get-tracking-data?site_id=${tjHub.site_id}`, JSON.stringify({ events: [{ event: 'click_outbound', data: eventData }] }));
     } else {
-      // Registra cliques internos normalmente
+     
       tjHub.track('click', eventData);
     }
   });
