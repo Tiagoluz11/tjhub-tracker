@@ -75,16 +75,36 @@
     };
 
     if (target.tagName.toLowerCase() === 'a' && target.hostname !== window.location.hostname) {
-      
       eventData.external = true;
       tjHub.track('click_outbound', eventData);
-
-      
       navigator.sendBeacon(`https://tj-track-bd.tj-studio-ltda.workers.dev/get-tracking-data?site_id=${tjHub.site_id}`, JSON.stringify({ events: [{ event: 'click_outbound', data: eventData }] }));
     } else {
-     
       tjHub.track('click', eventData);
     }
+  });
+
+  // 🔹 Captura envios de formulário com data-track="true"
+  document.addEventListener("submit", function (event) {
+    const form = event.target;
+    if (!form || form.tagName.toLowerCase() !== "form") return;
+
+    // Só rastreia formulários com atributo data-track="true"
+    if (form.getAttribute("data-track") !== "true") return;
+
+    let formData = new FormData(form);
+    let formFields = {};
+    for (let [key, value] of formData.entries()) {
+      if (typeof key === 'string' && key.toLowerCase().includes('senha')) continue;
+      formFields[key] = value;
+    }
+
+    tjHub.track("form_submit", {
+      action: form.action || '',
+      method: form.method || 'GET',
+      form_id: form.id || '',
+      form_class: form.className || '',
+      fields: formFields
+    });
   });
 
   window.tjHub = tjHub;
