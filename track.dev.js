@@ -162,7 +162,6 @@ let maxScrollDepth = 0;
 let maxScrollEventSent = false; // Flag para garantir que o evento seja enviado apenas uma vez por página.
 
 // 1. Durante a navegação, apenas observa e atualiza a profundidade máxima atingida.
-//    Nenhum evento é enviado aqui para evitar "ruído" e garantir a melhor performance.
 window.addEventListener("scroll", function() {
     const totalHeight = Math.max(
         document.body.scrollHeight, document.documentElement.scrollHeight,
@@ -175,36 +174,76 @@ window.addEventListener("scroll", function() {
     if (currentDepth > maxScrollDepth) {
         maxScrollDepth = currentDepth;
     }
-}, { passive: true }); // A opção { passive: true } melhora a performance de rolagem, informando ao navegador que este listener não irá impedi-la.
+}, { passive: true });
 
-// 2. Envia um único evento final com a profundidade máxima quando o usuário está prestes a sair da página.
-//    O evento 'visibilitychange' é o mais confiável para detectar que o usuário trocou de aba, minimizou ou está navegando para outra página.
-document.addEventListener('visibilitychange', function() {
-    // O estado 'hidden' indica que a página não está mais visível para o usuário.
-    if (document.visibilityState === 'hidden' && !maxScrollEventSent) {
-        
-        // Só envia o evento se o usuário tiver rolado a página de fato (profundidade > 0).
+/**
+ * Função unificada para disparar o evento de scroll.
+ * Garante que o evento seja enviado apenas uma vez.
+ */
+function triggerScrollEvent() {
+    if (!maxScrollEventSent) {
         if (maxScrollDepth > 0) {
             const eventData = {
-                max_scroll_depth: maxScrollDepth, // Envia a profundidade exata alcançada, que é mais valiosa para o heatmap.
+                max_scroll_depth: maxScrollDepth,
                 page_path: window.location.pathname,
                 device_category: getDeviceCategory()
             };
             tjHub.track("scroll_depth_max", eventData);
-            sendGa4Event("scroll_depth", { // 'scroll_depth' é um nome comum para este tipo de evento no GA4.
+            sendGa4Event("scroll_depth", {
                 max_scroll_depth: maxScrollDepth,
                 page_path: window.location.pathname,
                 device_category: getDeviceCategory()
             });
         }
-        
-        // Marca o evento como enviado para garantir que ele não seja disparado novamente na mesma visualização de página.
         maxScrollEventSent = true;
+    }
+}
+
+// 2. Adiciona listeners para eventos de saída da página.
+// 'visibilitychange' cobre trocas de aba e minimização.
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') {
+        triggerScrollEvent();
     }
 });
 
+// 'pagehide' é um gatilho mais robusto para quando o usuário navega para outra página ou fecha a aba.
+window.addEventListener('pagehide', triggerScrollEvent);
+
+
 
     // --- Função Principal de Rastreamento ---
+
+    /**
+     * Força o envio de todos os eventos na fila.
+     * Ideal para ser usado antes do descarregamento da página.
+     */
+    function flushQueue() {
+        // Cancela qualquer envio agendado para evitar duplicidade.
+        if (tjHub.sending) {
+            clearTimeout(tjHub.sending);
+            tjHub.sending = null;
+        }
+
+        if (tjHub.queue.length > 0) {
+            let eventsToSend = tjHub.queue.slice();
+            tjHub.queue = [];
+
+            const payload = JSON.stringify({ events: eventsToSend });
+            const url = `${TRACKING_ENDPOINT}?site_id=${tjHub.site_id}`;
+
+            // sendBeacon é a API ideal para enviar dados no momento da saída da página.
+            if (navigator.sendBeacon) {
+                navigator.sendBeacon(url, payload);
+            } else {
+                // Fallback síncrono para navegadores mais antigos.
+                fetch(url, { method: "POST", body: payload, keepalive: false });
+            }
+        }
+    }
+    
+    // Adiciona um listener global para garantir que a fila seja enviada antes da página fechar.
+    window.addEventListener('pagehide', flushQueue);
 
     /**
      * Coleta e enfileira um evento para ser enviado ao servidor.
@@ -229,28 +268,8 @@ document.addEventListener('visibilitychange', function() {
         });
 
         // Se um envio já não estiver agendado, agenda um novo.
-        // Isso agrupa vários eventos em uma única requisição (batching).
         if (!tjHub.sending) {
-            tjHub.sending = setTimeout(() => {
-                let eventsToSend = tjHub.queue.slice(); // Copia a fila.
-                tjHub.queue = []; // Limpa a fila original.
-
-                const payload = JSON.stringify({
-                    events: eventsToSend
-                });
-
-                // Usa sendBeacon para envio assíncrono e confiável, com fallback para fetch.
-                const url = `${TRACKING_ENDPOINT}?site_id=${tjHub.site_id}`;
-                if (navigator.sendBeacon) {
-                    navigator.sendBeacon(url, payload);
-                } else {
-                    fetch(url, {
-                        method: "POST",
-                        body: payload
-                    });
-                }
-                tjHub.sending = null; // Libera para o próximo agendamento.
-            }, 5000); // Envia dados a cada 5 segundos.
+            tjHub.sending = setTimeout(flushQueue, 5000); // Usa a função flushQueue para enviar os dados.
         }
     };
 
