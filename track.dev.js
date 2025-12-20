@@ -156,59 +156,52 @@
     })();
 
     // --- Rastreamento de Scroll (Rolagem da Página) ---
+// Abordagem moderna para rastrear a profundidade máxima de rolagem com eficiência.
 
-    let scrollTimeout;
-    let lastScrollY = 0;
-    let maxScrollDepth = 0;
-    let scrollCompletionSent = false; // Flag para garantir que o evento de 90% seja enviado apenas uma vez.
+let maxScrollDepth = 0;
+let maxScrollEventSent = false; // Flag para garantir que o evento seja enviado apenas uma vez por página.
 
-    window.addEventListener("scroll", function() {
-        lastScrollY = window.scrollY;
-        const totalHeight = Math.max(
-            document.body.scrollHeight, document.documentElement.scrollHeight,
-            document.body.offsetHeight, document.documentElement.offsetHeight,
-            document.body.clientHeight, document.documentElement.clientHeight
-        ) - window.innerHeight;
+// 1. Durante a navegação, apenas observa e atualiza a profundidade máxima atingida.
+//    Nenhum evento é enviado aqui para evitar "ruído" e garantir a melhor performance.
+window.addEventListener("scroll", function() {
+    const totalHeight = Math.max(
+        document.body.scrollHeight, document.documentElement.scrollHeight,
+        document.body.offsetHeight, document.documentElement.offsetHeight,
+        document.body.clientHeight, document.documentElement.clientHeight
+    ) - window.innerHeight;
 
-        const currentDepth = totalHeight > 0 ? Math.round((lastScrollY / totalHeight) * 100) : 0;
+    const currentDepth = totalHeight > 0 ? Math.round((window.scrollY / totalHeight) * 100) : 0;
 
-        if (currentDepth > maxScrollDepth) {
-            maxScrollDepth = currentDepth;
-        }
+    if (currentDepth > maxScrollDepth) {
+        maxScrollDepth = currentDepth;
+    }
+}, { passive: true }); // A opção { passive: true } melhora a performance de rolagem, informando ao navegador que este listener não irá impedi-la.
 
-        // Rastreia quando o usuário atinge 90% de rolagem (apenas uma vez por página).
-        if (!scrollCompletionSent && currentDepth >= 90) {
-            scrollCompletionSent = true;
+// 2. Envia um único evento final com a profundidade máxima quando o usuário está prestes a sair da página.
+//    O evento 'visibilitychange' é o mais confiável para detectar que o usuário trocou de aba, minimizou ou está navegando para outra página.
+document.addEventListener('visibilitychange', function() {
+    // O estado 'hidden' indica que a página não está mais visível para o usuário.
+    if (document.visibilityState === 'hidden' && !maxScrollEventSent) {
+        
+        // Só envia o evento se o usuário tiver rolado a página de fato (profundidade > 0).
+        if (maxScrollDepth > 0) {
             const eventData = {
-                scroll_depth: 90,
+                max_scroll_depth: maxScrollDepth, // Envia a profundidade exata alcançada, que é mais valiosa para o heatmap.
                 page_path: window.location.pathname,
                 device_category: getDeviceCategory()
             };
-            tjHub.track("scroll_completion", eventData);
-            sendGa4Event("scroll_completion", eventData);
-        }
-
-        // Usa um debounce para o evento de scroll vertical, evitando enviar dados em excesso.
-        clearTimeout(scrollTimeout);
-        scrollTimeout = setTimeout(() => {
-            const eventData = {
-                scroll_y: lastScrollY,
-                scroll_depth: currentDepth,
+            tjHub.track("scroll_depth_max", eventData);
+            sendGa4Event("scroll_depth", { // 'scroll_depth' é um nome comum para este tipo de evento no GA4.
                 max_scroll_depth: maxScrollDepth,
-                screen_size: `${window.innerWidth}x${window.innerHeight}`,
-                session_id: tjHub.session_id,
-                page_path: window.location.pathname,
-                device_category: getDeviceCategory()
-            };
-            tjHub.track("vertical_scroll", eventData);
-            // O evento 'scroll' é um evento padrão recomendado pelo GA4.
-            sendGa4Event("scroll", {
-                scroll_depth: currentDepth,
                 page_path: window.location.pathname,
                 device_category: getDeviceCategory()
             });
-        }, 3000); // Aguarda 3 segundos de inatividade de scroll antes de enviar.
-    });
+        }
+        
+        // Marca o evento como enviado para garantir que ele não seja disparado novamente na mesma visualização de página.
+        maxScrollEventSent = true;
+    }
+});
 
 
     // --- Função Principal de Rastreamento ---
