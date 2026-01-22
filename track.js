@@ -182,6 +182,8 @@ const gaMeasurementId = getGaMeasurementId();
       let maxScrollDepth = 0;
       let maxScrollEventSent = false; // Flag para garantir que o evento seja enviado apenas uma vez por página.
       let lastSentScrollDepth = 0; // Para evitar envio duplicado
+      let scrollFocusTimer = null;
+      let pendingScrollEventData = null;
 
       // 1. Durante a navegação, apenas observa e atualiza a profundidade máxima atingida.
       window.addEventListener("scroll", function () {
@@ -199,7 +201,8 @@ const gaMeasurementId = getGaMeasurementId();
                   const roundedDepth = Math.floor(currentDepth / 10) * 10;
                   if (roundedDepth > lastSentScrollDepth) {
                         lastSentScrollDepth = roundedDepth;
-                        const eventData = {
+                        // Prepara os dados do evento
+                        pendingScrollEventData = {
                               scroll_y: window.scrollY,
                               scroll_depth: roundedDepth,
                               max_scroll_depth: maxScrollDepth,
@@ -208,15 +211,51 @@ const gaMeasurementId = getGaMeasurementId();
                               page_path: window.location.pathname,
                               device_category: getDeviceCategory()
                         };
-                        console.log('[TJHub] vertical_scroll event', eventData);
-                        tjHub.track("vertical_scroll", eventData);
-                        sendGa4Event("vertical_scroll", {
-                              scroll_depth: roundedDepth,
-                              page_path: window.location.pathname,
-                              device_category: getDeviceCategory()
-                        });
+                        // Se já existe um timer, cancela
+                        if (scrollFocusTimer) {
+                              clearTimeout(scrollFocusTimer);
+                              scrollFocusTimer = null;
+                        }
+                        // Só inicia o timer se a página estiver em foco
+                        if (document.visibilityState === 'visible') {
+                              scrollFocusTimer = setTimeout(function () {
+                                    if (pendingScrollEventData) {
+                                          console.log('[TJHub] vertical_scroll event (foco)', pendingScrollEventData);
+                                          tjHub.track("vertical_scroll", pendingScrollEventData);
+                                          sendGa4Event("vertical_scroll", {
+                                                scroll_depth: pendingScrollEventData.scroll_depth,
+                                                page_path: pendingScrollEventData.page_path,
+                                                device_category: pendingScrollEventData.device_category
+                                          });
+                                          pendingScrollEventData = null;
+                                    }
+                              }, 5000); // 5 segundos em foco
+                        }
                   }
             }
+            // Cancela o timer se perder o foco
+            document.addEventListener('visibilitychange', function () {
+                  if (document.visibilityState !== 'visible' && scrollFocusTimer) {
+                        clearTimeout(scrollFocusTimer);
+                        scrollFocusTimer = null;
+                        pendingScrollEventData = null;
+                  }
+                  // Se voltar ao foco e há evento pendente, reinicia o timer
+                  if (document.visibilityState === 'visible' && pendingScrollEventData) {
+                        scrollFocusTimer = setTimeout(function () {
+                              if (pendingScrollEventData) {
+                                    console.log('[TJHub] vertical_scroll event (foco)', pendingScrollEventData);
+                                    tjHub.track("vertical_scroll", pendingScrollEventData);
+                                    sendGa4Event("vertical_scroll", {
+                                          scroll_depth: pendingScrollEventData.scroll_depth,
+                                          page_path: pendingScrollEventData.page_path,
+                                          device_category: pendingScrollEventData.device_category
+                                    });
+                                    pendingScrollEventData = null;
+                              }
+                        }, 5000);
+                  }
+            });
       }, { passive: true });
 
       /**
