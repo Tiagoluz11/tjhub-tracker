@@ -1,3 +1,18 @@
+    // Detecta o GA4 Measurement ID dinamicamente pela URL do script
+    function getGaMeasurementId() {
+        const scripts = document.getElementsByTagName('script');
+        for (let script of scripts) {
+            if (script.src && script.src.includes('track.js')) {
+                try {
+                    const url = new URL(script.src, window.location.origin);
+                    const gaId = url.searchParams.get('ga_id');
+                    if (gaId) return gaId;
+                } catch (e) {}
+            }
+        }
+        return null;
+    }
+    const gaMeasurementId = getGaMeasurementId();
 // Versão: 1.0.1 - Última atualização: 21/01/2026
 (function() {
     // Inicializa o dataLayer para o Google Tag Manager, se ele não existir.
@@ -29,11 +44,11 @@
         if (isGa4Available()) {
             try {
                     console.log('[TJHub][GA4] Tentando enviar evento:', eventName, eventParams);
-                    gtag("event", eventName, {
-                    ...eventParams,
-                    send_to: "all", // Garante que o evento seja enviado para todas as propriedades do GA4.
-                    non_interaction: eventName === "scroll" || eventName === "vertical_scroll" // Marca eventos de scroll como "não interação" para não afetar a taxa de rejeição.
-                });
+                        gtag("event", eventName, {
+                            ...eventParams,
+                            send_to: gaMeasurementId || "all",
+                            non_interaction: eventName === "scroll" || eventName === "vertical_scroll"
+                        });
                     console.log('[TJHub][GA4] Evento enviado para o gtag:', eventName);
             } catch (error) {
                     console.error("[TJHub][GA4] Erro ao enviar evento:", eventName, error);
