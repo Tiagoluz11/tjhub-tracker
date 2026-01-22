@@ -1,4 +1,4 @@
-// Versão: 1.0.0 - Última atualização: 21/01/2026
+// Versão: 1.0.1 - Última atualização: 21/01/2026
 (function() {
     // Inicializa o dataLayer para o Google Tag Manager, se ele não existir.
     window.dataLayer = window.dataLayer || [];
@@ -28,15 +28,20 @@
     function sendGa4Event(eventName, eventParams) {
         if (isGa4Available()) {
             try {
-                gtag("event", eventName, {
+                    console.log('[TJHub][GA4] Tentando enviar evento:', eventName, eventParams);
+                    gtag("event", eventName, {
                     ...eventParams,
                     send_to: "all", // Garante que o evento seja enviado para todas as propriedades do GA4.
                     non_interaction: eventName === "scroll" || eventName === "vertical_scroll" // Marca eventos de scroll como "não interação" para não afetar a taxa de rejeição.
                 });
+                    console.log('[TJHub][GA4] Evento enviado para o gtag:', eventName);
             } catch (error) {
-                console.warn("GA4 tracking error:", error);
+                    console.error("[TJHub][GA4] Erro ao enviar evento:", eventName, error);
             }
         }
+            else {
+                console.warn('[TJHub][GA4] gtag não está disponível no momento do envio:', eventName);
+            }
     }
 
     // --- Informações de Dispositivo e Tela ---
