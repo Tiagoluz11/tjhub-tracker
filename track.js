@@ -1,4 +1,4 @@
-// Versão: 1.0.2 - Última atualização: 21/01/2026
+// Versão: 1.0.3 - Última atualização: 21/01/2026
 
 function getGaMeasurementId() {
       const scripts = document.getElementsByTagName('script');
@@ -195,12 +195,13 @@ const gaMeasurementId = getGaMeasurementId();
 
             if (currentDepth > maxScrollDepth) {
                   maxScrollDepth = currentDepth;
-                  // Dispara evento vertical_scroll sempre que atingir uma nova profundidade máxima
-                  if (currentDepth > lastSentScrollDepth) {
-                        lastSentScrollDepth = currentDepth;
+                  // Dispara evento vertical_scroll apenas em múltiplos de 10% de profundidade
+                  const roundedDepth = Math.floor(currentDepth / 10) * 10;
+                  if (roundedDepth > lastSentScrollDepth) {
+                        lastSentScrollDepth = roundedDepth;
                         const eventData = {
                               scroll_y: window.scrollY,
-                              scroll_depth: currentDepth,
+                              scroll_depth: roundedDepth,
                               max_scroll_depth: maxScrollDepth,
                               screen_size: `${window.innerWidth}x${window.innerHeight}`,
                               session_id: tjHub.session_id,
@@ -210,7 +211,7 @@ const gaMeasurementId = getGaMeasurementId();
                         console.log('[TJHub] vertical_scroll event', eventData);
                         tjHub.track("vertical_scroll", eventData);
                         sendGa4Event("vertical_scroll", {
-                              scroll_depth: currentDepth,
+                              scroll_depth: roundedDepth,
                               page_path: window.location.pathname,
                               device_category: getDeviceCategory()
                         });
