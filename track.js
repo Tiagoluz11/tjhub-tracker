@@ -1,4 +1,4 @@
-// Versão: 1.0.6 - Última atualização: 31/01/2026
+// Versão: 1.0.7 - Última atualização: 31/01/2026
 // Alterações: Implementada trava anti-duplicidade em formulários e otimização de fila.
 
 function getGaMeasurementId() {
